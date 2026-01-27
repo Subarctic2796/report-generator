@@ -1,1 +1,4 @@
 /examples/*
+/build/
+/dist/
+/report-gen.spec
