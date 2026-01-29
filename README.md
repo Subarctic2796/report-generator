@@ -14,5 +14,10 @@ git clone --depth=1 url/to/repo/report-generator.git
 cd report-generator
 # create and setup venv
 pip install -r requirements.txt
-pyinstaller -F --clean -n report-gen main.py
+pip install pyinstaller
+pyinstaller --clean -Fn report-gen main.py \
+         --hiddenimport=pyexcel_io.writers \
+         --hiddenimport=pyexcel_io.readers \
+         --hiddenimport=pyexcel_xls        \
+         --hiddenimport=pyexcel_xlsx 
 ```

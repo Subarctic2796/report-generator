@@ -1,4 +1,4 @@
-from sys import stderr, argv
+from sys import stderr, argv, exit
 from collections import Counter
 from datetime import datetime, date
 from os.path import isfile
@@ -23,6 +23,7 @@ def get_assigned(path: str) -> AssignedClosedInfo:
         else:
             cntr[(i["retriever"], date_)] += 1
     pyxl.free_resources()
+    print(f"successfully read assigned file: {path}")
     return cntr
 
 
@@ -37,6 +38,7 @@ def get_closed(path: str) -> AssignedClosedInfo:
         else:
             cntr[(i["retriever"], date_)] += 1
     pyxl.free_resources()
+    print(f"successfully read closed file: {path}")
     return cntr
 
 
@@ -63,6 +65,7 @@ def generate_assigned_to_closed(assigned_path: str, closed_path: str, output_pat
     for k, v in assigned.items():
         data.append((k[0], v, closed[k]))
     pyxl.save_as(array=data, sheet_name="parameds consolidated", dest_file_name=output_path)
+    print(f"successfully created {output_path}")
     return True
 
 
