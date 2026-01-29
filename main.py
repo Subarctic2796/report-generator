@@ -1,48 +1,35 @@
-from sys import stderr, argv, exit
 from collections import Counter
 from datetime import datetime, date
 from os.path import isfile
-from typing import TypeAlias
+from sys import stderr, argv, exit
+from typing import TypeAlias, Literal
 
 import pyexcel as pyxl
 
 # Types
 """(name, date): num [assigned|closed]"""
-AssignedClosedInfo: TypeAlias = Counter[tuple[str, date]]
-BothAssignedClosedInfo: TypeAlias = tuple[AssignedClosedInfo, AssignedClosedInfo]
+ExtractedInfo: TypeAlias = Counter[tuple[str, date]]
+BothExtractedInfo: TypeAlias = tuple[ExtractedInfo, ExtractedInfo]
+Row: TypeAlias = tuple[str, str | int, str | int]
 
 
-def get_assigned(path: str) -> AssignedClosedInfo:
-    """assumes that `path` exists. You are responsible for making sure that `path` exists"""
+def get_info(path: str, key: Literal["assigned", "aps_rec"]) -> ExtractedInfo | None:
+    """assumes that `path` exists.
+    `key` can only be the string 'assigned' or 'aps_rec'"""
     records = pyxl.iget_records(file_name=path)
-    cntr: Counter[tuple[str, date]] = Counter()
+    cntr: ExtractedInfo = Counter()
     for i in records:
-        date_: datetime | date = i["assigned"]
+        date_: datetime | date = i[key]
         if isinstance(date_, datetime):
             cntr[(i["retriever"], date_.date())] += 1
         else:
             cntr[(i["retriever"], date_)] += 1
     pyxl.free_resources()
-    print(f"successfully read assigned file: {path}")
+    print(f"successfully read {'assigned' if key == 'assigned' else 'closed'} file: {path}")
     return cntr
 
 
-def get_closed(path: str) -> AssignedClosedInfo:
-    """assumes that `path` exists.You are responsible for making sure that `path` exists"""
-    records = pyxl.iget_records(file_name=path)
-    cntr: Counter[tuple[str, date]] = Counter()
-    for i in records:
-        date_: datetime | date = i["aps_rec"]
-        if isinstance(date_, datetime):
-            cntr[(i["retriever"], date_.date())] += 1
-        else:
-            cntr[(i["retriever"], date_)] += 1
-    pyxl.free_resources()
-    print(f"successfully read closed file: {path}")
-    return cntr
-
-
-def get_assigned_and_closed(assigned_path: str, closed_path: str) -> BothAssignedClosedInfo | None:
+def get_assigned_and_closed(assigned_path: str, closed_path: str) -> BothExtractedInfo | None:
     """gets both the assigned and the closed info"""
     if not isfile(assigned_path):
         print(f"[ERROR]: [display_assigned_or_closed]: '{assigned_path}' does not exist", file=stderr)
@@ -50,7 +37,15 @@ def get_assigned_and_closed(assigned_path: str, closed_path: str) -> BothAssigne
     if not isfile(closed_path):
         print(f"[ERROR]: [display_assigned_or_closed]: '{closed_path}' does not exist", file=stderr)
         return None
-    return get_assigned(assigned_path), get_closed(closed_path)
+
+    assigned = get_info(assigned_path, "assigned")
+    if assigned is None:
+        return None
+
+    closed = get_info(closed_path, "aps_rec")
+    if closed is None:
+        return None
+    return assigned, closed
 
 
 def generate_assigned_to_closed(assigned_path: str, closed_path: str, output_path: str) -> bool:
@@ -61,9 +56,7 @@ def generate_assigned_to_closed(assigned_path: str, closed_path: str, output_pat
     assigned, closed = both_optional
 
     # flatten
-    data: list[tuple[str, str | int, str | int]] = [("name", "assigned", "closed")]
-    for k, v in assigned.items():
-        data.append((k[0], v, closed[k]))
+    data: list[Row] = [("name", "assigned", "closed")] + [(k[0], v, closed[k]) for k, v in assigned.items()]
     pyxl.save_as(array=data, sheet_name="parameds consolidated", dest_file_name=output_path)
     print(f"successfully created {output_path}")
     return True
@@ -74,11 +67,11 @@ if __name__ == '__main__':
         print("usage: report-gen /path/to/assigned.xls, /path/to/closed.xls /path/to/output.xlsx")
         exit(1)
 
-    assigned_path, closed_path, output_path = argv[1:]
-    if not output_path.endswith(".xlsx"):
+    assigned, closed, output = argv[1:]
+    if not output.endswith(".xlsx"):
         print("[ERROR]: [main]: output path must end with xlsx", file=stderr)
         exit(1)
 
-    if not generate_assigned_to_closed(assigned_path, closed_path, output_path):
+    if not generate_assigned_to_closed(assigned, closed, output):
         print("[ERROR]: [main]: unable to create consolidated output", file=stderr)
         exit(1)
