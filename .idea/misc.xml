@@ -3,9 +3,6 @@
   <component name="Black">
     <option name="sdkName" value="Python 3.10 (report-generator)" />
   </component>
-  <component name="GithubDefaultAccount">
-    <option name="defaultAccountId" value="928d2b43-1f0b-4bcc-95d7-bc3d15e7aa53" />
-  </component>
   <component name="GradleMigrationSettings" migrationVersion="1" />
   <component name="GradleSettings">
     <option name="parallelModelFetch" value="true" />
