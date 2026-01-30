@@ -19,11 +19,16 @@ def get_info(path: str, key: Literal["assigned", "aps_rec"]) -> ExtractedInfo | 
     records = pyxl.iget_records(file_name=path)
     cntr: ExtractedInfo = Counter()
     for i in records:
-        date_: datetime | date = i[key]
-        if isinstance(date_, datetime):
-            cntr[(i["retriever"], date_.date())] += 1
-        else:
-            cntr[(i["retriever"], date_)] += 1
+        try:
+            name: str = i["retriever"]
+        except KeyError:
+            name: str = i["ret"]
+        except Exception as err:
+            print(f"[ERROR]: [get_info]: '{path=}' {key=}: {err=}, {type(err)=}", file=stderr)
+            return None
+
+        date_: datetime | date = i[key].date() if isinstance(i[key], datetime) else i[key]
+        cntr[(name, date_)] += 1
     pyxl.free_resources()
     print(f"successfully read {'assigned' if key == 'assigned' else 'closed'} file: {path}")
     return cntr
@@ -32,10 +37,10 @@ def get_info(path: str, key: Literal["assigned", "aps_rec"]) -> ExtractedInfo | 
 def get_assigned_and_closed(assigned_path: str, closed_path: str) -> BothExtractedInfo | None:
     """gets both the assigned and the closed info"""
     if not isfile(assigned_path):
-        print(f"[ERROR]: [display_assigned_or_closed]: '{assigned_path}' does not exist", file=stderr)
+        print(f"[ERROR]: [get_assigned_and_closed]: '{assigned_path}' does not exist", file=stderr)
         return None
     if not isfile(closed_path):
-        print(f"[ERROR]: [display_assigned_or_closed]: '{closed_path}' does not exist", file=stderr)
+        print(f"[ERROR]: [get_assigned_and_closed]: '{closed_path}' does not exist", file=stderr)
         return None
 
     assigned = get_info(assigned_path, "assigned")
